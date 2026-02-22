@@ -1,0 +1,12 @@
+# Key
+.env
+*.log
+
+# Node Modules
+node_modules/
+
+# No Required Files
+.DS_Store
+
+# Docs
+docs/
