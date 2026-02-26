@@ -26,4 +26,94 @@ router.get('/me', authenticate, (req, res) => {
   });
 });
 
+const { firebaseApiKey } = require('../config/env');
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: 이메일/비밀번호로 회원가입
+ *     description: 서버 측에서 Firebase Auth REST API를 호출하여 신규 유저를 생성하고 Token을 반환합니다.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: 회원가입 성공 및 토큰 반환
+ *       400:
+ *         description: 잘못된 요청 또는 이미 존재하는 이메일
+ */
+router.post('/register', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+  try {
+    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseApiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error.message);
+
+    res.json({ message: '회원가입 성공', token: data.idToken, expiresIn: data.expiresIn });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: 이메일/비밀번호로 로그인
+ *     description: 서버 측에서 Firebase Auth REST API를 호출하여 로그인을 수행하고 Token을 추출합니다.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: 로그인 성공 및 토큰 반환
+ *       400:
+ *         description: 잘못된 계정 정보
+ */
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+  try {
+    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseApiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error.message);
+
+    res.json({ message: '로그인 성공', token: data.idToken, expiresIn: data.expiresIn });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 module.exports = router;
