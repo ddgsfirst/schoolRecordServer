@@ -1,27 +1,32 @@
-const jwt = require('jsonwebtoken');
-const { jwtSecret } = require('../config/env');
-const { getUserById, toPublicUser } = require('../auth/users');
+const { admin } = require('../config/firebase');
+const { syncUserFromFirebase, toPublicUser } = require('../auth/users');
 
 /**
- * Authorization: Bearer <token> 헤더로 JWT 검증 후 req.user에 사용자 정보 설정
+ * Authorization: Bearer <Firebase_ID_Token> 헤더로 Firebase JWT 검증 후 
+ * req.user에 Firestore 사용자 정보 설정
  */
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: '인증이 필요합니다. Authorization: Bearer <token>' });
+    return res.status(401).json({ error: '인증이 필요합니다. Authorization: Bearer <Firebase_ID_Token>' });
   }
-  const token = authHeader.slice(7);
+
+  const token = authHeader.split('Bearer ')[1];
+
   try {
-    const payload = jwt.verify(token, jwtSecret);
-    const user = getUserById(payload.userId);
-    if (!user) {
-      return res.status(401).json({ error: '사용자를 찾을 수 없습니다.' });
-    }
+    // 1. Firebase Admin SDK로 토큰 유효성 검증
+    const decodedToken = await admin.auth().verifyIdToken(token);
+
+    // 2. 검증된 토큰의 uid를 기반으로 Firestore에서 유저 정보 동기화 및 가져오기 (가입/로그인 대체)
+    const user = await syncUserFromFirebase(decodedToken);
+
+    // 3. Request 객체에 담기
     req.user = toPublicUser(user);
     next();
   } catch (err) {
-    if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: '토큰이 만료되었습니다.' });
+    console.error('[Auth Error]', err.code || err.message);
+    if (err.code === 'auth/id-token-expired') {
+      return res.status(401).json({ error: '토큰이 만료되었습니다. 다시 로그인해주세요.' });
     }
     return res.status(401).json({ error: '유효하지 않은 토큰입니다.' });
   }

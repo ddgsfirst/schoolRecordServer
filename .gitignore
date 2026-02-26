@@ -10,3 +10,7 @@ node_modules/
 
 # Docs
 docs/
+
+# Cloud Run
+cloudbuild.yaml
+docker-compose.yml

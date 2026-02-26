@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const { nodeEnv } = require('./config/env');
+require('./config/firebase');
 
 const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth');
@@ -19,6 +20,10 @@ if (nodeEnv !== 'test') {
 // Routes
 app.use('/', indexRouter);
 app.use('/auth', authRouter);
+
+// Swagger Documentation
+const swaggerDocs = require('./config/swagger');
+swaggerDocs(app);
 
 // 404 handler
 app.use((req, res) => {

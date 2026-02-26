@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://coderabbit.ai/export/schema.json
+language: "en-US"
+tone_instructions: "코드 리뷰는 건설적이고 명확하며 친절하게 작성해 주세요. 항상 존댓말을 사용하세요."
+early_access: false
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poe_approval: false
+  run_on_draft: false
+  run_on_linked_issues: false
+chat:
+  auto_reply: true
