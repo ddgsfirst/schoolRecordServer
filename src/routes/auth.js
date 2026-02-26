@@ -1,65 +1,29 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const { jwtSecret, jwtExpiresIn } = require('../config/env');
-const { createUser, findUserByEmail, verifyPassword, toPublicUser } = require('../auth/users');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
-// POST /auth/register - 회원가입
-router.post('/register', async (req, res, next) => {
-  try {
-    const { email, password, displayName } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'email과 password는 필수입니다.' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ error: '비밀번호는 6자 이상이어야 합니다.' });
-    }
-    const user = await createUser(email, password, displayName);
-    if (!user) {
-      return res.status(409).json({ error: '이미 등록된 이메일입니다.' });
-    }
-    const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: jwtExpiresIn });
-    res.status(201).json({
-      user,
-      token,
-      expiresIn: jwtExpiresIn,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// POST /auth/login - 로그인
-router.post('/login', async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'email과 password는 필수입니다.' });
-    }
-    const user = await findUserByEmail(email);
-    if (!user) {
-      return res.status(401).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
-    }
-    const valid = await verifyPassword(password, user.passwordHash);
-    if (!valid) {
-      return res.status(401).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
-    }
-    const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: jwtExpiresIn });
-    res.json({
-      user: toPublicUser(user),
-      token,
-      expiresIn: jwtExpiresIn,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// GET /auth/me - 로그인한 사용자 정보 (인증 필요)
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: 로그인한 사용자 정보 조회 및 동기화
+ *     description: 프론트엔드에서 발급받은 Firebase ID Token을 Authorization 헤더에 Bearer 타입으로 전달하면, 유효성을 검증하고 Firestore 사용자 정보를 반환합니다. (자동 가입 및 갱신 포함)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 사용자 정보 반환 성공
+ *       401:
+ *         description: 유효하지 않은 토큰이거나 인증 헤더 누락
+ */
 router.get('/me', authenticate, (req, res) => {
-  res.json({ user: req.user });
+  // 인증 미들웨어(authenticate) 통과 시, req.user 객체에 사용자 정보가 담깁니다.
+  res.json({
+    message: '인증 완료. 사용자 정보입니다.',
+    user: req.user
+  });
 });
 
 module.exports = router;
